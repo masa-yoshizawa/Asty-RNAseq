@@ -1,7 +1,14 @@
 ### RNAseq analysis by following the protocol 
 ## http://www.bioconductor.org/help/workflows/rnaseqGene/
 
+### Please note that this script is not only for R but also include shell script.####################
+### These are labeled as "Shell" or "R" in followings.
+
 #### RNAseq analysis using SRA data set
+
+## Shell ################################################################
+## Shell in followings ################################################################
+
 ## SRA tool
 ## download SRA tool kit at http://www.ncbi.nlm.nih.gov/Traces/sra/sra.cgi?view=software
 ## manual: http://www.ncbi.nlm.nih.gov/Traces/sra/sra.cgi?view=toolkit_doc
@@ -41,6 +48,8 @@ for f in `cat files.txt`; do /Users/masato/STAR --genomeDir /yourLocalFolder/Ast
 --readFilesIn fastq/$f.fastq \
 --runThreadN 5 --outFileNamePrefix aligned/$f.; done
 
+## R ################################################################
+## R scripts in followings ################################################################
 ####### 
 ## in R  convert .sam into .bam
 source("https://bioconductor.org/biocLite.R")
@@ -52,26 +61,6 @@ library("GenomicFeatures")
 mydir <- "/yourLocalFolder/RNAseq"
 gtffile <- file.path(mydir,"Astyanax_mexicanus.AstMex102.84.gtf")
 txdb <- makeTxDbFromGFF(gtffile, format="gtf", circ_seqs=character())
-Import genomic features from the file as a GRanges object ... OK
-Prepare the 'metadata' data frame ... OK
-Make the TxDb object ... OK
-txdb
-# TxDb object:
-# Db type: TxDb
-# Supporting package: GenomicFeatures
-# Data source: /yourLocalFolder/RNAseq/aligned/../Astyanax_mexicanus.AstMex102.85.gtf
-# Organism: NA
-# Taxonomy ID: NA
-# miRBase build ID: NA
-# Genome: NA
-# transcript_nrow: 24428
-# exon_nrow: 234091
-# cds_nrow: 227528
-# Db created by: GenomicFeatures package from Bioconductor
-# Creation time: 2016-04-25 12:44:28 -1000 (Mon, 25 Apr 2016)
-# GenomicFeatures version at creation time: 1.22.13
-# RSQLite version at creation time: 1.0.0
-# DBSCHEMAVERSION: 1.1
 
 ebg <- exonsBy(txdb, by="gene")
 biocLite("GenomicAlignments"); biocLite("BiocParallel")
@@ -86,22 +75,9 @@ myfilenames <- file.path(mydir, paste0(mysampleTable$Run_s, ".Aligned.out.bam"))
 file.exists(myfilenames)
 bamfiles <- BamFileList(myfilenames)
 seqinfo(bamfiles[1])
-seqnames   seqlengths isCircular genome
-  KB871578.1    9823298       <NA>   <NA>
-  KB882103.1    9494329       <NA>   <NA>
-  KB871579.1    9390088       <NA>   <NA>
-  KB882082.1    8876373       <NA>   <NA>
-  KB882145.1    7632222       <NA>   <NA>
-  ...               ...        ...    ...
-  KB882063.1        894       <NA>   <NA>
-  KB875979.1        889       <NA>   <NA>
-  KB875980.1        889       <NA>   <NA>
-  KB875981.1        887       <NA>   <NA>
-  KB875982.1        876       <NA>   <NA>
-se <- summarizeOverlaps(features=ebg, reads=bamfiles,
-mode="Union",
-singleEnd=TRUE,
-ignore.strand=TRUE)
+##### check the bamfiles info
+
+se <- summarizeOverlaps(features=ebg, reads=bamfiles, mode="Union", singleEnd=TRUE, ignore.strand=TRUE)
 colData(se) <- DataFrame(mysampleTable)
 countdata <- assay(se)
 coldata <- colData(se)
@@ -118,12 +94,7 @@ se
 
 ### change the order of column level
 se$Sample_Name_s <- relevel(se$Sample_Name_s, "Surface_fish")
-se$Sample_Name_s
-[1] Surface_fish    Surface_fish    Surface_fish    Pachon_Cavefish Pachon_Cavefish Pachon_Cavefish
-Levels: Surface_fish Pachon_Cavefish
-se$age_s
- [1] 10 hpf 10 hpf 10 hpf 24 hpf 24 hpf 24 hpf 36 hpf 36 hpf 36 hpf 72 hpf 72 hpf 72 hpf 10 hpf 10 hpf 10 hpf 24 hpf 24 hpf 24 hpf 36 hpf 36 hpf 36 hpf 72 hpf 72 hpf 72 hpf
-Levels: 10 hpf 24 hpf 36 hpf 72 hpf
+
 
 ##################################################################################################################################################################
 ###### set "design= ~ Sample_Name_s + age_s + Sample_Name_s:age_s" for full comparizon in two-way, and drop "Sample_Name_s + age_s" to calculate the interaction.
@@ -133,19 +104,19 @@ ddsTC <- DESeq(ddsTC, test="LRT", reduced = ~ Sample_Name_s + age_s)
 resTC <- results(ddsTC)
 resTC$symbol <- mcols(ddsTC)$symbol
 resultsNames(ddsTC)
-[1] "Intercept"                                     "Sample_Name_s_Pachon_Cavefish_vs_Surface_fish" "age_s_24.hpf_vs_10.hpf"                       
-[4] "age_s_36.hpf_vs_10.hpf"                        "age_s_72.hpf_vs_10.hpf"                        "Sample_Name_sPachon_Cavefish.age_s24.hpf"     
-[7] "Sample_Name_sPachon_Cavefish.age_s36.hpf"      "Sample_Name_sPachon_Cavefish.age_s72.hpf" 
+## check the ddsTC info
 res_SfCf_age <- results(ddsTC, name="Sample_Name_sPachon_Cavefish.age_s72.hpf", test="Wald")
 res_SfCf_age[which.min(resTC$padj),]
+### check the result of res_SfCf_age. Followings are output of it
 #log2 fold change (MLE): Sample Name sPachon Cavefish.age s72.hpf 
 #Wald test p-value: Sample Name sPachon Cavefish.age s72.hpf 
 #DataFrame with 1 row and 6 columns
-                    baseMean log2FoldChange     lfcSE      stat        pvalue         padj
-                   <numeric>      <numeric> <numeric> <numeric>     <numeric>    <numeric>
-ENSAMXG00000021623   1241.15       -4.97287  0.210131 -23.66557 8.160012e-124 8.98499e-120
+#                    baseMean log2FoldChange     lfcSE      stat        pvalue         padj
+#                   <numeric>      <numeric> <numeric> <numeric>     <numeric>    <numeric>
+#ENSAMXG00000021623   1241.15       -4.97287  0.210131 -23.66557 8.160012e-124 8.98499e-120
+#...
 
-write.csv(res_SfCf_age, file="/yourLocalFolder/RNAseq/results_SfCf_age.csv")
+write.csv(res_SfCf_age, file="/yourLocalFolder/RNAseq/results_SfCf_age.csv") ### save the result to analyze further in MS Excel
 
 ##################################################################################################################################################################
 ###### import only 72hpf files (written down in SraRunTable_72hpf.csv
@@ -156,30 +127,14 @@ myfilenames <- file.path(mydir, paste0(mysampleTable$Run_s, ".Aligned.out.bam"))
 file.exists(myfilenames)
 bamfiles <- BamFileList(myfilenames)
 seqinfo(bamfiles[1])
-## Seqinfo object with 10735 sequences from an unspecified genome:
-##   seqnames   seqlengths isCircular genome
-##   KB871578.1    9823298       <NA>   <NA>
-##   KB882103.1    9494329       <NA>   <NA>
-##   KB871579.1    9390088       <NA>   <NA>
-##   KB882082.1    8876373       <NA>   <NA>
-##   KB882145.1    7632222       <NA>   <NA>
-##   ...               ...        ...    ...
-##   KB882063.1        894       <NA>   <NA>
-##   KB875979.1        889       <NA>   <NA>
-##   KB875980.1        889       <NA>   <NA>
-##   KB875981.1        887       <NA>   <NA>
-##   KB875982.1        876       <NA>   <NA>
 
-se <- summarizeOverlaps(features=ebg, reads=bamfiles,
-mode="Union",
-singleEnd=TRUE,
-ignore.strand=TRUE)
-
+se <- summarizeOverlaps(features=ebg, reads=bamfiles, mode="Union", singleEnd=TRUE, ignore.strand=TRUE)
 colData(se) <- DataFrame(mysampleTable)
 countdata <- assay(se)
 coldata <- colData(se)
 
 se
+### check 'se' info. Followings are output of it
 # class: RangedSummarizedExperiment 
 # dim: 23772 6 
 # metadata(0):
@@ -190,17 +145,21 @@ se
 # colData names(31): BioSample_s Experiment_s ... source_s tissue_s
 
 se$Sample_Name_s
+### check 'se$Sample_Name_s' info. Followings are output of it
 # [1] Surface_fish    Surface_fish    Surface_fish    Pachon_Cavefish Pachon_Cavefish Pachon_Cavefish
 # Levels: Pachon_Cavefish Surface_fish
 se$Sample_Name_s <- relevel(se$Sample_Name_s, "Surface_fish")
 se$Sample_Name_s
+### check 'se$Sample_Name_s' info after changing the level. Followings are output of it
 # Levels: Surface_fish Pachon_Cavefish
 se$age_s
+### check 'se$age_s' info. Followings are output of it
 # [1] 72 hpf 72 hpf 72 hpf 72 hpf 72 hpf 72 hpf
-# Levels: 72 hpf
+# Levels: 72 hpf   --> only 72hpf data is available
 dds <- DESeqDataSet(se, design= ~ Sample_Name_s)
 ddsMat <- DESeqDataSetFromMatrix(countData = countdata, colData = coldata, design = ~ Sample_Name_s)
 ddsMat
+### check 'ddsMat' info. Followings are output of it
 # class: DESeqDataSet 
 # dim: 23772 6 
 # metadata(1): version
@@ -209,13 +168,11 @@ ddsMat
 # rowData names(0):
 # colnames: NULL
 # colData names(31): BioSample_s Experiment_s ... source_s tissue_s
-nrow(dds)
-# [1] 23772
-dds <- dds[ rowSums(counts(dds)) > 1, ]
-nrow(dds)
-# [1] 22767
+
+dds <- dds[ rowSums(counts(dds)) > 1, ]  ## removing no-count genes
+
 rld <- rlog(dds, blind=FALSE)
 dds <- estimateSizeFactors(dds)
 dds <- DESeq(dds)
 resSfCf <- results(dds, contrast=c("Sample_Name_s", "Surface_fish","Pachon_Cavefish"))
-write.csv(resSfCf, file="/yourLocalFolder/RNAseq/results_SfCf_72hpf.csv")
+write.csv(resSfCf, file="/yourLocalFolder/RNAseq/results_SfCf_72hpf.csv")  ### save the result to analyze further in MS Excel
